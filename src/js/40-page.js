@@ -38,7 +38,7 @@ async function abrirPaginaView(id,forcar){if(S.pagina&&S.pagina.id===id&&!forcar
   if(!p.titulo&&podeEditar())setTimeout(()=>{const t=$('.page-title',c);t&&t.focus();},60);}
 
 function paginaElemento(p,opts){opts=opts||{};const el=document.createElement('div');el.className='page'+(p.largura_total||p.tipo==='base'?' wide':'');
-  const temCapa=!!p.capa;const capaCss=capaStyle(p.capa);
+  const temCapa=!!p.capa&&!String(p.capa).startsWith('pendente:');const capaCss=capaStyle(p.capa);
   el.innerHTML=(temCapa?'<div class="page-cover" style="'+capaCss+'">'+(podeEditar()?'<div class="cover-acts"><button class="btn btn-sm" onclick="capaMenu(this)">Trocar capa</button><button class="btn btn-sm" onclick="setCapa(null)">Remover</button></div>':'')+'</div>':'')+
     '<div class="page-head'+(temCapa?' com-capa':'')+'">'+
     (p.icone?'<div class="page-icon" onclick="podeEditar()&&emojiPicker(this,e=>setIcone(e))">'+iconeDe(p)+'</div>':'')+
@@ -56,7 +56,7 @@ function paginaElemento(p,opts){opts=opts||{};const el=document.createElement('d
   t.addEventListener('paste',e=>{e.preventDefault();document.execCommand('insertText',false,(e.clipboardData.getData('text/plain')||'').replace(/\n+/g,' '));});
   return el;}
 async function focarEditor(){const ed=S.editor;if(!ed)return;try{await ed.isReady;if(!ed.blocks.getBlocksCount())ed.blocks.insert('paragraph',{text:''},{},0,true);else ed.caret.setToFirstBlock('start');ed.focus(false);}catch(e){}}
-function capaStyle(c){if(!c)return '';if(c.startsWith('grad:'))return 'background:'+c.slice(5);if(c.startsWith('drive:'))return 'background-image:url('+arqUrl(c.slice(6),'thumb','w1600')+')';return 'background-image:url('+esc(c)+')';}
+function capaStyle(c){if(!c||String(c).startsWith('pendente:'))return '';if(c.startsWith('grad:'))return 'background:'+c.slice(5);if(c.startsWith('drive:'))return 'background-image:url('+arqUrl(c.slice(6),'thumb','w1600')+')';return 'background-image:url('+esc(c)+')';}
 const GRADS=['linear-gradient(135deg,#1D3573,#4567A8)','linear-gradient(135deg,#A48A57,#E3CFA1)','linear-gradient(135deg,#0f2027,#203a43,#2c5364)','linear-gradient(135deg,#f6d365,#fda085)','linear-gradient(135deg,#a1c4fd,#c2e9fb)','linear-gradient(135deg,#d4fc79,#96e6a1)','linear-gradient(135deg,#fbc2eb,#a6c1ee)','linear-gradient(135deg,#1B2235,#6B7384)'];
 function capaMenu(anchor){const html='<div class="plbl">GRADIENTES</div><div class="cores">'+GRADS.map(g=>'<div class="c" style="background:'+g+';width:34px;height:26px" data-g="'+g+'"></div>').join('')+'</div><div class="psep"></div><div class="pi" id="cp_up"><span class="ico">⇧</span><span>Enviar imagem (Drive)</span></div><div class="pi" id="cp_url"><span class="ico">🔗</span><span>Usar link de imagem</span></div>'+(S.pagina.capa?'<div class="pi danger" id="cp_rm"><span class="ico">✕</span><span>Remover capa</span></div>':'');
   const el=pop(anchor,html);$$('.c',el).forEach(c=>c.onclick=()=>{popFechar();setCapa('grad:'+c.dataset.g);});
