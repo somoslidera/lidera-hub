@@ -27,21 +27,28 @@ def main():
         for rel, lst in list(vistos.items())[:30]: print(rel, len(lst), lst[0]['uso'])
         return
     falhas = []
-    for i, (rel, lst) in enumerate(vistos.items()):
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+    lock = threading.Lock(); fila = []
+    for rel, lst in vistos.items():
         if rel in prog and prog[rel].get('drive_id'): continue
         p = os.path.join(RAW, rel)
         if not os.path.exists(p): falhas.append((rel, 'inexistente')); continue
         tam = os.path.getsize(p)
         if tam > maxmb * 1024 * 1024: falhas.append((rel, f'grande {tam/1048576:.0f} MB')); continue
-        a = lst[0]
+        fila.append((rel, lst[0], p))
+    fila.sort(key=lambda x: os.path.getsize(x[2]))   # pequenos primeiro
+    def sobe(item):
+        rel, a, p = item
         try:
             b64 = base64.b64encode(open(p, 'rb').read()).decode()
             j = H.fn('/upload', {'pagina_id': a['pagina_id'], 'nome': a['nome'], 'mime': a['mime'], 'dataB64': b64})
-            prog[rel] = {'drive_id': j['arquivo']['drive_id'], 'link': j['arquivo'].get('link'), 'nome': j['arquivo']['nome'], 'mime': j['arquivo']['mime'], 'tamanho': j['arquivo']['tamanho']}
-            salva(); print(f'[{i+1}/{len(vistos)}] {rel[:70]} ok', flush=True)
+            with lock:
+                prog[rel] = {'drive_id': j['arquivo']['drive_id'], 'link': j['arquivo'].get('link'), 'nome': j['arquivo']['nome'], 'mime': j['arquivo']['mime'], 'tamanho': j['arquivo']['tamanho']}
+                salva(); print(f'[{len(prog)}/{len(vistos)}] {rel[-60:]} ok ({os.path.getsize(p)/1048576:.1f} MB)', flush=True)
         except Exception as e:
-            falhas.append((rel, str(e)[:160])); print(f'[{i+1}/{len(vistos)}] {rel[:70]} FALHOU {str(e)[:120]}', flush=True)
-            if 'não conectado' in str(e): break
+            with lock: falhas.append((rel, str(e)[:160])); print(f'FALHOU {rel[-60:]} {str(e)[:140]}', flush=True)
+    with ThreadPoolExecutor(max_workers=5) as ex: list(ex.map(sobe, fila))
     print('falhas:', len(falhas))
     for f in falhas[:40]: print('  ', f)
     # ---- trocar referências nas páginas ----

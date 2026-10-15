@@ -448,6 +448,8 @@ def main():
                     o = next((o for o in d['opcoes'] if o['nome'] == v), None); pg['props'][d['id']] = o['id'] if o else v
                 elif d['tipo'] == 'multi':
                     pg['props'][d['id']] = [next((o['id'] for o in d['opcoes'] if o['nome'] == x), x) for x in (v if isinstance(v, list) else [v])]
+                elif d['tipo'] in ('pessoa', 'arquivos') and not isinstance(v, list):
+                    pg['props'][d['id']] = [v]
                 elif d['tipo'] == 'relacao':
                     pg['props'][d['id']] = [hid(x) for x in v if x in by_nid]
                 elif d['tipo'] == 'pessoa':

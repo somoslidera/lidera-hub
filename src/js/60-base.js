@@ -4,22 +4,23 @@ const CORES_TAG=['gray','brown','orange','yellow','green','blue','purple','pink'
 const corAleatoria=()=>CORES_TAG[Math.floor(Math.random()*CORES_TAG.length)];
 function baseEsquemaPadrao(){return {props:[{id:'status',nome:'Status',tipo:'status',opcoes:[{id:'a',nome:'A fazer',cor:'gray'},{id:'b',nome:'Em andamento',cor:'blue'},{id:'c',nome:'Concluído',cor:'green'}]},{id:'resp',nome:'Responsável',tipo:'pessoa'},{id:'prazo',nome:'Prazo',tipo:'data'}]};}
 function baseVisoesPadrao(){return [{id:'v1',nome:'Tabela',tipo:'tabela',props:null},{id:'v2',nome:'Kanban',tipo:'kanban',agrupar:'status'}];}
+const arr=v=>v==null||v===''?[]:Array.isArray(v)?v:[v];
 const B={};   // estado da base montada: {host, base, linhas, visao, opts}
 
 function propsDe(base){return ((base.esquema&&base.esquema.props)||[]);}
 function propPorId(base,id){return propsDe(base).find(p=>p.id===id);}
 function opcaoDe(prop,v){if(!prop||!prop.opcoes)return null;return prop.opcoes.find(o=>o.id===v||o.nome===v)||null;}
 function valorTexto(prop,v,linha){if(prop.tipo==='criado_em')return fmtData(linha.criado_em,true);if(prop.tipo==='atualizado_em')return fmtData(linha.atualizado_em,true);if(v==null||v==='')return '';
-  switch(prop.tipo){case 'select':case 'status':{const o=opcaoDe(prop,v);return o?o.nome:String(v);}case 'multi':return (Array.isArray(v)?v:[v]).map(x=>{const o=opcaoDe(prop,x);return o?o.nome:x;}).join(', ');case 'data':return typeof v==='object'?fmtData(v.inicio,v.hora)+(v.fim?' → '+fmtData(v.fim,v.hora):''):fmtData(v);case 'pessoa':return (Array.isArray(v)?v:[v]).map(nomeMembro).join(', ');case 'checkbox':return v?'Sim':'Não';case 'numero':return fmtNum(v,prop.formato);case 'arquivos':return (v||[]).map(a=>a.nome).join(', ');case 'relacao':return (v||[]).map(id=>(B.rel&&B.rel[id])||'…').join(', ');default:return String(v);}}
+  switch(prop.tipo){case 'select':case 'status':{const o=opcaoDe(prop,v);return o?o.nome:String(v);}case 'multi':return arr(v).map(x=>{const o=opcaoDe(prop,x);return o?o.nome:x;}).join(', ');case 'data':return typeof v==='object'?fmtData(v.inicio,v.hora)+(v.fim?' → '+fmtData(v.fim,v.hora):''):fmtData(v);case 'pessoa':return arr(v).map(nomeMembro).join(', ');case 'checkbox':return v?'Sim':'Não';case 'numero':return fmtNum(v,prop.formato);case 'arquivos':return arr(v).map(a=>a&&a.nome||'').join(', ');case 'relacao':return arr(v).map(id=>(B.rel&&B.rel[id])||'…').join(', ');default:return String(v);}}
 function valorHTML(prop,v,linha){if(prop.tipo==='criado_em'||prop.tipo==='atualizado_em')return '<span class="muted">'+esc(valorTexto(prop,v,linha))+'</span>';if(v==null||v===''||(Array.isArray(v)&&!v.length))return '';
   switch(prop.tipo){case 'select':case 'status':{const o=opcaoDe(prop,v);return '<span class="tag '+(o?o.cor:'')+'">'+esc(o?o.nome:v)+'</span>';}
-    case 'multi':return (Array.isArray(v)?v:[v]).map(x=>{const o=opcaoDe(prop,x);return '<span class="tag '+(o?o.cor:'')+'">'+esc(o?o.nome:x)+'</span>';}).join('');
-    case 'pessoa':return (Array.isArray(v)?v:[v]).map(id=>'<span class="chip"><span class="av" style="width:18px;height:18px;font-size:9px">'+esc((nomeMembro(id)||'?')[0].toUpperCase())+'</span>'+esc(nomeMembro(id)||'?')+'</span>').join('');
+    case 'multi':return arr(v).map(x=>{const o=opcaoDe(prop,x);return '<span class="tag '+(o?o.cor:'')+'">'+esc(o?o.nome:x)+'</span>';}).join('');
+    case 'pessoa':return arr(v).map(id=>'<span class="chip"><span class="av" style="width:18px;height:18px;font-size:9px">'+esc((nomeMembro(id)||'?')[0].toUpperCase())+'</span>'+esc(nomeMembro(id)||'?')+'</span>').join('');
     case 'checkbox':return '<span class="chk-box'+(v?' on':'')+'">'+(v?'✓':'')+'</span>';
     case 'url':return '<a href="'+esc(/^https?:/.test(v)?v:'https://'+v)+'" target="_blank" onclick="event.stopPropagation()" style="text-decoration:underline;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%">'+esc(v.replace(/^https?:\/\//,''))+'</a>';
     case 'email':return '<a href="mailto:'+esc(v)+'" onclick="event.stopPropagation()">'+esc(v)+'</a>';
-    case 'arquivos':return (v||[]).map(a=>'<a class="chip" href="'+esc(a.drive_id?arqUrl(a.drive_id,'view'):a.url||'#')+'" target="_blank" onclick="event.stopPropagation()" title="'+esc(a.nome)+'">'+MIME_ICO(a.mime)+' '+esc((a.nome||'arquivo').slice(0,28))+'</a>').join('');
-    case 'relacao':return (v||[]).map(id=>'<span class="chip" onclick="event.stopPropagation();peek(\''+id+'\')" style="cursor:pointer">↗ '+esc((B.rel&&B.rel[id])||'…')+'</span>').join('');
+    case 'arquivos':return arr(v).filter(a=>a&&typeof a==='object').map(a=>'<a class="chip" href="'+esc(a.drive_id?arqUrl(a.drive_id,'view'):a.url||'#')+'" target="_blank" onclick="event.stopPropagation()" title="'+esc(a.nome)+'">'+MIME_ICO(a.mime)+' '+esc((a.nome||'arquivo').slice(0,28))+'</a>').join('');
+    case 'relacao':return arr(v).map(id=>'<span class="chip" onclick="event.stopPropagation();peek(\''+id+'\')" style="cursor:pointer">↗ '+esc((B.rel&&B.rel[id])||'…')+'</span>').join('');
     case 'data':return '<span>'+esc(valorTexto(prop,v,linha))+'</span>';
     default:return '<span style="white-space:pre-wrap">'+esc(valorTexto(prop,v,linha))+'</span>';}}
 
@@ -31,7 +32,7 @@ async function baseMontar(base,host,opts){opts=opts||{};if(!host)return;host.inn
   if(!base.visoes.some(v=>v.id===st.visaoId))st.visaoId=base.visoes[0].id;
   host._st=st;if(!opts.inline)Object.assign(B,st);
   await baseCarregarRelacoes(st);baseRender(st);}
-async function baseCarregarRelacoes(st){const ids=new Set();propsDe(st.base).filter(p=>p.tipo==='relacao').forEach(p=>st.linhas.forEach(l=>(l.props[p.id]||[]).forEach(id=>ids.add(id))));if(!ids.size)return;const {data}=await sb.from('hub_paginas').select('id,titulo').in('id',Array.from(ids));(data||[]).forEach(d=>st.rel[d.id]=d.titulo||'Sem título');B.rel=Object.assign(B.rel||{},st.rel);}
+async function baseCarregarRelacoes(st){const ids=new Set();propsDe(st.base).filter(p=>p.tipo==='relacao').forEach(p=>st.linhas.forEach(l=>arr(l.props[p.id]).forEach(id=>ids.add(id))));if(!ids.size)return;const {data}=await sb.from('hub_paginas').select('id,titulo').in('id',Array.from(ids));(data||[]).forEach(d=>st.rel[d.id]=d.titulo||'Sem título');B.rel=Object.assign(B.rel||{},st.rel);}
 function stDe(el){const h=el.closest('.base-wrap');return h&&h.parentElement._st;}
 function visaoAtual(st){return st.base.visoes.find(v=>v.id===st.visaoId)||st.base.visoes[0];}
 async function baseSalvar(st,patch){const b=st.base;Object.assign(b,patch||{});const {error}=await sb.from('hub_paginas').update({esquema:b.esquema,visoes:b.visoes}).eq('id',b.id);if(error)toast('Erro ao salvar a base: '+error.message,{erro:true});if(S.pagina&&S.pagina.id===b.id){S.pagina.esquema=b.esquema;S.pagina.visoes=b.visoes;}}
@@ -94,7 +95,7 @@ function linhasVisiveis(st){const v=visaoAtual(st);let ls=st.linhas.slice();(v.f
   return ls;}
 function gruposDe(st,ls,propId){const p=propPorId(st.base,propId);if(!p)return [{id:null,nome:'Tudo',linhas:ls}];
   if(p.tipo==='select'||p.tipo==='status'){const gs=(p.opcoes||[]).map(o=>({id:o.id,nome:o.nome,cor:o.cor,linhas:ls.filter(l=>l.props[p.id]===o.id||l.props[p.id]===o.nome)}));gs.unshift({id:'',nome:'Sem '+p.nome.toLowerCase(),cor:'',linhas:ls.filter(l=>{const v=l.props[p.id];return v==null||v===''||!(p.opcoes||[]).some(o=>o.id===v||o.nome===v);})});return gs;}
-  if(p.tipo==='pessoa'){const gs=S.membros.map(m=>({id:m.user_id,nome:m.nome||m.email,linhas:ls.filter(l=>(l.props[p.id]||[]).includes(m.user_id))}));gs.unshift({id:'',nome:'Sem responsável',linhas:ls.filter(l=>!(l.props[p.id]||[]).length)});return gs;}
+  if(p.tipo==='pessoa'){const gs=S.membros.map(m=>({id:m.user_id,nome:m.nome||m.email,linhas:ls.filter(l=>arr(l.props[p.id]).includes(m.user_id))}));gs.unshift({id:'',nome:'Sem responsável',linhas:ls.filter(l=>!arr(l.props[p.id]).length)});return gs;}
   if(p.tipo==='checkbox')return [{id:'1',nome:'Marcado',linhas:ls.filter(l=>l.props[p.id])},{id:'',nome:'Desmarcado',linhas:ls.filter(l=>!l.props[p.id])}];
   const m={};ls.forEach(l=>{const k=valorTexto(p,l.props[p.id],l)||'(vazio)';(m[k]=m[k]||[]).push(l);});return Object.keys(m).sort().map(k=>({id:k,nome:k,linhas:m[k]}));}
 
@@ -127,11 +128,11 @@ function celulaEditar(st,c,l,p){const v=l.props[p.id];const refaz=()=>{c.innerHT
   switch(p.tipo){
     case 'checkbox':linhaSet(st,l,p.id,!v);refaz();return;
     case 'select':case 'status':return selectPicker(c,p,v,async nv=>{await linhaSet(st,l,p.id,nv);refaz();},st);
-    case 'multi':return multiPicker(c,p,v||[],async nv=>{await linhaSet(st,l,p.id,nv);refaz();},st);
-    case 'pessoa':return pessoaPicker(c,v||[],async nv=>{await linhaSet(st,l,p.id,nv);refaz();});
+    case 'multi':return multiPicker(c,p,arr(v),async nv=>{await linhaSet(st,l,p.id,nv);refaz();},st);
+    case 'pessoa':return pessoaPicker(c,arr(v),async nv=>{await linhaSet(st,l,p.id,nv);refaz();});
     case 'data':return dataPicker(c,v,async nv=>{await linhaSet(st,l,p.id,nv);refaz();});
-    case 'arquivos':return arquivosPicker(c,v||[],l,async nv=>{await linhaSet(st,l,p.id,nv);refaz();});
-    case 'relacao':return relacaoPicker(c,p,v||[],async nv=>{await linhaSet(st,l,p.id,nv);await baseCarregarRelacoes(st);refaz();});
+    case 'arquivos':return arquivosPicker(c,arr(v),l,async nv=>{await linhaSet(st,l,p.id,nv);refaz();});
+    case 'relacao':return relacaoPicker(c,p,arr(v),async nv=>{await linhaSet(st,l,p.id,nv);await baseCarregarRelacoes(st);refaz();});
     case 'criado_em':case 'atualizado_em':return;
     default:{if(c.classList.contains('editing'))return;c.classList.add('editing');const multi=p.tipo==='texto';c.innerHTML=multi?'<textarea class="input sm" style="min-height:60px;width:100%">'+esc(v==null?'':v)+'</textarea>':'<input class="input sm" type="'+(p.tipo==='numero'?'number':'text')+'" value="'+esc(v==null?'':v)+'" style="width:100%">';const i=$('input,textarea',c);i.focus();
       const fim=async()=>{let nv=i.value;if(p.tipo==='numero')nv=nv===''?null:+nv;c.classList.remove('editing');await linhaSet(st,l,p.id,nv);refaz();};i.onblur=fim;i.onkeydown=e=>{if(e.key==='Enter'&&!(multi&&e.shiftKey)){e.preventDefault();i.blur();}if(e.key==='Escape'){i.value=v==null?'':v;i.blur();}};}}}
@@ -233,5 +234,5 @@ async function propsMontar(p,host){if(!host)return;const base=S.byId[p.base_id]?
   host._st=Object.assign(st,{host:{innerHTML:'',_st:st},_render:render});
   const origRender=baseRender;}
 function celulaEditarPainel(st,c,l,p,render){const refaz=()=>render();const v=l.props[p.id];
-  switch(p.tipo){case 'checkbox':linhaSet(st,l,p.id,!v).then(refaz);return;case 'select':case 'status':return selectPicker(c,p,v,async nv=>{await linhaSet(st,l,p.id,nv);refaz();},st);case 'multi':return multiPicker(c,p,v||[],async nv=>{await linhaSet(st,l,p.id,nv);refaz();},st);case 'pessoa':return pessoaPicker(c,v||[],async nv=>{await linhaSet(st,l,p.id,nv);refaz();});case 'data':return dataPicker(c,v,async nv=>{await linhaSet(st,l,p.id,nv);refaz();});case 'arquivos':return arquivosPicker(c,v||[],l,async nv=>{await linhaSet(st,l,p.id,nv);refaz();});case 'relacao':return relacaoPicker(c,p,v||[],async nv=>{await linhaSet(st,l,p.id,nv);await baseCarregarRelacoes(st);refaz();});case 'criado_em':case 'atualizado_em':return;
+  switch(p.tipo){case 'checkbox':linhaSet(st,l,p.id,!v).then(refaz);return;case 'select':case 'status':return selectPicker(c,p,v,async nv=>{await linhaSet(st,l,p.id,nv);refaz();},st);case 'multi':return multiPicker(c,p,arr(v),async nv=>{await linhaSet(st,l,p.id,nv);refaz();},st);case 'pessoa':return pessoaPicker(c,arr(v),async nv=>{await linhaSet(st,l,p.id,nv);refaz();});case 'data':return dataPicker(c,v,async nv=>{await linhaSet(st,l,p.id,nv);refaz();});case 'arquivos':return arquivosPicker(c,arr(v),l,async nv=>{await linhaSet(st,l,p.id,nv);refaz();});case 'relacao':return relacaoPicker(c,p,arr(v),async nv=>{await linhaSet(st,l,p.id,nv);await baseCarregarRelacoes(st);refaz();});case 'criado_em':case 'atualizado_em':return;
     default:{c.classList.remove('vazio');c.innerHTML=p.tipo==='texto'?'<textarea class="input sm" style="width:100%;min-height:60px">'+esc(v==null?'':v)+'</textarea>':'<input class="input sm" type="'+(p.tipo==='numero'?'number':'text')+'" value="'+esc(v==null?'':v)+'" style="width:100%">';const i=$('input,textarea',c);i.focus();i.onclick=e=>e.stopPropagation();const fim=async()=>{let nv=i.value;if(p.tipo==='numero')nv=nv===''?null:+nv;await linhaSet(st,l,p.id,nv);refaz();};i.onblur=fim;i.onkeydown=e=>{if(e.key==='Enter'&&!(p.tipo==='texto'&&e.shiftKey)){e.preventDefault();i.blur();}if(e.key==='Escape'){i.value=v==null?'':v;i.blur();}};}}}
