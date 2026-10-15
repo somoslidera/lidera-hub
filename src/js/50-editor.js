@@ -100,9 +100,17 @@ class Sumario{static get toolbox(){return {title:'Sumário',icon:'<svg width="17
 
 /* ---- upload ---- */
 function escolherArquivos(cb,accept,multi){const i=document.createElement('input');i.type='file';if(accept)i.accept=accept;if(multi)i.multiple=true;i.onchange=()=>cb(Array.from(i.files));i.click();}
-async function uploadArquivo(file,paginaId){if(!file)return null;if(file.size>45*1024*1024){toast('Arquivo acima de 45 MB. Suba direto no Google Drive e cole o link aqui.',{erro:true,ms:6000});return null;}
-  const fd=new FormData();fd.append('file',file);fd.append('pagina_id',paginaId);fd.append('nome',file.name);
-  try{const j=await fn('/upload',fd);toast('Arquivo enviado para o Drive');return j.arquivo;}catch(e){toast('Falha no envio: '+e.message,{erro:true,ms:6000});return null;}}
+async function uploadArquivo(file,paginaId){if(!file)return null;
+  try{
+    if(file.size<=4*1024*1024){const fd=new FormData();fd.append('file',file);fd.append('pagina_id',paginaId);fd.append('nome',file.name);const j=await fn('/upload',fd);toast('Arquivo enviado para o Drive');return j.arquivo;}
+    // arquivos maiores: sessão retomável, os bytes vão direto para o Google
+    const ini=await fn('/upload/iniciar',{pagina_id:paginaId,nome:file.name,mime:file.type||'application/octet-stream',tamanho:file.size});
+    const t=toast('Enviando '+file.name+' ('+fmtBytes(file.size)+')…',{ms:600000});
+    const r=await fetch(ini.sessao,{method:'PUT',headers:{'Content-Type':file.type||'application/octet-stream'},body:file});
+    if(!r.ok)throw new Error('O Google recusou o envio ('+r.status+').');
+    const g=await r.json();const j=await fn('/upload/concluir',{pagina_id:paginaId,drive_id:g.id,pasta:ini.pasta});
+    $$('#toasts .toast').forEach(x=>x.remove());toast('Arquivo enviado para o Drive');return j.arquivo;
+  }catch(e){$$('#toasts .toast').forEach(x=>x.remove());toast('Falha no envio: '+e.message,{erro:true,ms:7000});return null;}}
 
 /* ---- montar / destruir ---- */
 function montarEditor(p,host){if(!host)return;destruirEditor();const ro=!podeEditar();

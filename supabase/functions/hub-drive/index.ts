@@ -252,6 +252,29 @@ Deno.serve(async (req) => {
       const { data: row } = await admin.from("hub_arquivos").insert({ pagina_id: paginaId, drive_id: f.id, nome: f.name || nome, mime: f.mimeType || mime, tamanho: +(f.size || bytes!.length), link: f.webViewLink || null, pasta_id: pasta, criado_por: q.uid }).select().single();
       return json({ ok: true, arquivo: { id: row?.id, drive_id: f.id, nome: f.name || nome, mime: f.mimeType || mime, tamanho: +(f.size || bytes!.length), link: f.webViewLink, tem_thumb: !!f.thumbnailLink } });
     }
+    // ----- upload grande: sessão retomável (o cliente manda os bytes direto ao Google) -----
+    if (rota === "/upload/iniciar") {
+      if (!edita(q)) return erro("Sem permissão para enviar arquivos.", 403);
+      const { pagina_id, nome, mime, tamanho } = await req.json();
+      if (!pagina_id || !nome) return erro("pagina_id e nome são obrigatórios.");
+      const pasta = await pastaDaPagina(pagina_id);
+      const origem = req.headers.get("Origin") || "";
+      const r = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id,name,mimeType,size,webViewLink,thumbnailLink", {
+        method: "POST",
+        headers: { Authorization: "Bearer " + (await accessToken()), "Content-Type": "application/json; charset=UTF-8", "X-Upload-Content-Type": mime || "application/octet-stream", ...(tamanho ? { "X-Upload-Content-Length": String(tamanho) } : {}), ...(origem ? { Origin: origem } : {}) },
+        body: JSON.stringify({ name: nome, parents: [pasta] }),
+      });
+      if (!r.ok) return erro("Google não abriu a sessão de envio: " + (await r.text()).slice(0, 300), 500);
+      return json({ ok: true, sessao: r.headers.get("Location"), pasta });
+    }
+    if (rota === "/upload/concluir") {
+      if (!edita(q)) return erro("Sem permissão.", 403);
+      const { pagina_id, drive_id, pasta } = await req.json();
+      if (!/^[\w-]+$/.test(drive_id || "")) return erro("drive_id inválido");
+      const f = await gapi(`files/${drive_id}?fields=id,name,mimeType,size,webViewLink,thumbnailLink,parents`);
+      const { data: row } = await admin.from("hub_arquivos").upsert({ pagina_id: pagina_id || null, drive_id: f.id, nome: f.name, mime: f.mimeType, tamanho: +(f.size || 0), link: f.webViewLink || null, pasta_id: pasta || (f.parents || [])[0] || null, criado_por: q.uid }, { onConflict: "drive_id" }).select().single();
+      return json({ ok: true, arquivo: { id: row?.id, drive_id: f.id, nome: f.name, mime: f.mimeType, tamanho: +(f.size || 0), link: f.webViewLink, tem_thumb: !!f.thumbnailLink } });
+    }
     if (rota === "/apagar") {
       if (!edita(q)) return erro("Sem permissão.", 403);
       const { drive_id } = await req.json();
