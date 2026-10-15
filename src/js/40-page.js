@@ -49,11 +49,13 @@ function paginaElemento(p,opts){opts=opts||{};const el=document.createElement('d
     '</div>'+
     (p.tipo==='base'?'<div id="base_host"></div>':'<div class="editor-wrap"><div id="editor_host"></div></div>');
   const t=$('.page-title',el);
-  t.addEventListener('input',()=>{const v=t.textContent.trim();S.pagina.titulo=v;S.dirty=true;agendarSalvar();const n=S.byId[p.id];if(n){n.titulo=v;}document.title=(v||'Sem título')+' · Hub';});
-  t.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();if(S.editor&&S.editor.focus)S.editor.focus();else if(p.tipo==='base'){t.blur();}}});
-  t.addEventListener('blur',()=>{renderTree();renderFavoritos();const cr=$$('#crumbs a.cur span:last-child');cr.length&&(cr[cr.length-1].textContent=S.pagina.titulo||'Sem título');});
+  const treeDeb=debounce(()=>{renderTree();renderFavoritos();},500);
+  t.addEventListener('input',()=>{if(!S.pagina)return;const v=t.textContent.trim();S.pagina.titulo=v;S.dirty=true;agendarSalvar();const n=S.byId[p.id];if(n){n.titulo=v;treeDeb();}document.title=(v||'Sem título')+' · Hub';});
+  t.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();if(p.tipo==='base'){t.blur();return;}focarEditor();}});
+  t.addEventListener('blur',()=>{if(!S.pagina)return;renderTree();renderFavoritos();const cr=$$('#crumbs a.cur span:last-child');cr.length&&(cr[cr.length-1].textContent=S.pagina.titulo||'Sem título');});
   t.addEventListener('paste',e=>{e.preventDefault();document.execCommand('insertText',false,(e.clipboardData.getData('text/plain')||'').replace(/\n+/g,' '));});
   return el;}
+async function focarEditor(){const ed=S.editor;if(!ed)return;try{await ed.isReady;if(!ed.blocks.getBlocksCount())ed.blocks.insert('paragraph',{text:''},{},0,true);else ed.caret.setToFirstBlock('start');ed.focus(false);}catch(e){}}
 function capaStyle(c){if(!c)return '';if(c.startsWith('grad:'))return 'background:'+c.slice(5);if(c.startsWith('drive:'))return 'background-image:url('+arqUrl(c.slice(6),'thumb','w1600')+')';return 'background-image:url('+esc(c)+')';}
 const GRADS=['linear-gradient(135deg,#1D3573,#4567A8)','linear-gradient(135deg,#A48A57,#E3CFA1)','linear-gradient(135deg,#0f2027,#203a43,#2c5364)','linear-gradient(135deg,#f6d365,#fda085)','linear-gradient(135deg,#a1c4fd,#c2e9fb)','linear-gradient(135deg,#d4fc79,#96e6a1)','linear-gradient(135deg,#fbc2eb,#a6c1ee)','linear-gradient(135deg,#1B2235,#6B7384)'];
 function capaMenu(anchor){const html='<div class="plbl">GRADIENTES</div><div class="cores">'+GRADS.map(g=>'<div class="c" style="background:'+g+';width:34px;height:26px" data-g="'+g+'"></div>').join('')+'</div><div class="psep"></div><div class="pi" id="cp_up"><span class="ico">⇧</span><span>Enviar imagem (Drive)</span></div><div class="pi" id="cp_url"><span class="ico">🔗</span><span>Usar link de imagem</span></div>'+(S.pagina.capa?'<div class="pi danger" id="cp_rm"><span class="ico">✕</span><span>Remover capa</span></div>':'');

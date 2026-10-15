@@ -34,6 +34,7 @@ class Arquivo{static get toolbox(){return [{title:'Imagem',icon:'<svg width="17"
   constructor({data,readOnly,api,block}){this.d=Object.assign({modo:'arquivo',drive_id:null,nome:'',mime:'',tamanho:0,link:'',legenda:'',url:''},data);this.ro=readOnly;this.api=api;this.block=block;}
   render(){const w=document.createElement('div');this.w=w;this.desenhar();return w;}
   desenhar(){const d=this.d,w=this.w;w.innerHTML='';
+    if(!d.drive_id&&!d.url&&d.pendente){w.innerHTML='<div class="hb-arquivo"><div class="fa-row"><div class="fa-ico">'+MIME_ICO(d.mime)+'</div><div class="grow" style="min-width:0"><div class="fa-nome">'+esc(d.nome||'arquivo')+'</div><div class="fa-meta">'+(d.tamanho?fmtBytes(d.tamanho)+' · ':'')+'migrando do Notion para o Drive…</div></div></div></div>';return;}
     if(!d.drive_id&&!d.url){if(this.ro){w.innerHTML='<div class="hb-upload">Arquivo não enviado</div>';return;}
       const accept=d.modo==='imagem'?'image/*':d.modo==='video'?'video/*':'';
       w.innerHTML='<div class="hb-upload"><div>'+(d.modo==='imagem'?'🖼 Clique ou arraste uma imagem':d.modo==='video'?'🎬 Clique ou arraste um vídeo':'📎 Clique ou arraste um arquivo')+'<div class="small soft" style="margin-top:4px">vai para o Google Drive da Lidera</div></div><input type="file" '+(accept?'accept="'+accept+'"':'')+'></div><div class="hb-url-form"><input class="input sm" placeholder="…ou cole um link (imagem, vídeo, Drive)"><button class="btn btn-sm btn-ghost">OK</button></div>';

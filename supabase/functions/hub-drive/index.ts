@@ -269,16 +269,16 @@ Deno.serve(async (req) => {
     // ----- membros (admin) -----
     if (rota === "/membro/criar") {
       if (q.papel !== "admin") return erro("Só administradores.", 403);
-      const { email, nome, senha, papel, google_email } = await req.json();
+      const { email, nome, senha, papel, google_email, trocar_senha } = await req.json();
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email || "")) return erro("E-mail inválido.");
-      if (!senha || senha.length < 6) return erro("Senha com ao menos 6 caracteres.");
       const em = String(email).toLowerCase().trim();
-      // já existe no Auth? (membro do Flow, por exemplo)
+      // já existe no Auth? (membro do Flow, por exemplo) → mantém a senha, a não ser que peçam para trocar
       let uid = "";
       const { data: lista } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
       const ja = lista?.users?.find((u) => (u.email || "").toLowerCase() === em);
-      if (ja) { uid = ja.id; await admin.auth.admin.updateUserById(uid, { password: senha }); }
+      if (ja) { uid = ja.id; if (trocar_senha && senha && senha.length >= 6) await admin.auth.admin.updateUserById(uid, { password: senha }); }
       else {
+        if (!senha || senha.length < 6) return erro("Senha com ao menos 6 caracteres.");
         const { data, error } = await admin.auth.admin.createUser({ email: em, password: senha, email_confirm: true, user_metadata: { nome } });
         if (error || !data.user) return erro("Não deu para criar a conta: " + (error?.message || ""), 400);
         uid = data.user.id;
