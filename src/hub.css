@@ -260,6 +260,32 @@ body.dark .inline-code{color:#F4A89E!important}
 .hb-base .bs-title{font-weight:700;font-size:15px;display:flex;align-items:center;gap:6px;cursor:pointer}
 .hb-base .bs-title:hover{text-decoration:underline}
 
+/* pasta de arquivos */
+.hb-pasta{border:1px solid var(--line);border-radius:12px;margin:8px 0;background:var(--card);overflow:hidden}
+.hb-pasta.over{border-color:var(--navy);box-shadow:0 0 0 3px var(--blue-bg)}
+.hb-pasta .hp-head{display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;user-select:none;flex-wrap:wrap}
+.hb-pasta .hp-chev{font-size:10px;opacity:.55;transition:transform .15s;width:14px}
+.hb-pasta.aberta .hp-chev{transform:rotate(90deg)}
+.hb-pasta .hp-ico{font-size:18px}
+.hb-pasta .hp-nome{font-weight:600;font-size:14.5px;outline:none;min-width:40px;padding:2px 4px;border-radius:6px}
+.hb-pasta .hp-nome:focus{background:var(--hover)}
+.hb-pasta .hp-nome:empty::before{content:attr(data-ph);color:var(--soft);font-weight:500}
+.hb-pasta .hp-meta{font-size:12px;color:var(--soft)}
+.hb-pasta .hp-acts{margin-left:auto;display:flex;gap:4px}
+.hb-pasta .hp-body{display:none;border-top:1px solid var(--line)}
+.hb-pasta.aberta .hp-body{display:block}
+.hb-pasta .hp-item{display:flex;align-items:center;gap:10px;padding:7px 12px;border-bottom:1px solid var(--line);font-size:13.5px}
+.hb-pasta .hp-item:last-child{border-bottom:none}
+.hb-pasta .hp-item:hover{background:var(--hover)}
+.hb-pasta .hp-fi{width:22px;text-align:center}
+.hb-pasta .hp-fn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.hb-pasta .hp-fs{font-size:12px;color:var(--soft);white-space:nowrap}
+.hb-pasta .hp-fa{display:flex;gap:2px;opacity:.7}
+.hb-pasta .hp-item:hover .hp-fa{opacity:1}
+.hb-pasta .hp-fa .ic-btn{width:26px;height:26px;font-size:13px}
+.hb-pasta .hp-vazia{padding:16px;text-align:center;color:var(--soft);font-size:13px}
+@media(max-width:860px){.hb-pasta .hp-acts{width:100%;margin-left:0}}
+
 /* ===== bases (tabela/kanban/lista/galeria/calendário) ===== */
 .base-bar{display:flex;align-items:center;gap:4px;margin:4px 0 10px;flex-wrap:wrap}
 .views{display:flex;gap:2px;flex:1;min-width:0;overflow-x:auto}

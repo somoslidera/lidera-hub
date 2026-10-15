@@ -290,6 +290,32 @@ body.dark .inline-code{color:#F4A89E!important}
 .hb-base .bs-title{font-weight:700;font-size:15px;display:flex;align-items:center;gap:6px;cursor:pointer}
 .hb-base .bs-title:hover{text-decoration:underline}
 
+/* pasta de arquivos */
+.hb-pasta{border:1px solid var(--line);border-radius:12px;margin:8px 0;background:var(--card);overflow:hidden}
+.hb-pasta.over{border-color:var(--navy);box-shadow:0 0 0 3px var(--blue-bg)}
+.hb-pasta .hp-head{display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;user-select:none;flex-wrap:wrap}
+.hb-pasta .hp-chev{font-size:10px;opacity:.55;transition:transform .15s;width:14px}
+.hb-pasta.aberta .hp-chev{transform:rotate(90deg)}
+.hb-pasta .hp-ico{font-size:18px}
+.hb-pasta .hp-nome{font-weight:600;font-size:14.5px;outline:none;min-width:40px;padding:2px 4px;border-radius:6px}
+.hb-pasta .hp-nome:focus{background:var(--hover)}
+.hb-pasta .hp-nome:empty::before{content:attr(data-ph);color:var(--soft);font-weight:500}
+.hb-pasta .hp-meta{font-size:12px;color:var(--soft)}
+.hb-pasta .hp-acts{margin-left:auto;display:flex;gap:4px}
+.hb-pasta .hp-body{display:none;border-top:1px solid var(--line)}
+.hb-pasta.aberta .hp-body{display:block}
+.hb-pasta .hp-item{display:flex;align-items:center;gap:10px;padding:7px 12px;border-bottom:1px solid var(--line);font-size:13.5px}
+.hb-pasta .hp-item:last-child{border-bottom:none}
+.hb-pasta .hp-item:hover{background:var(--hover)}
+.hb-pasta .hp-fi{width:22px;text-align:center}
+.hb-pasta .hp-fn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.hb-pasta .hp-fs{font-size:12px;color:var(--soft);white-space:nowrap}
+.hb-pasta .hp-fa{display:flex;gap:2px;opacity:.7}
+.hb-pasta .hp-item:hover .hp-fa{opacity:1}
+.hb-pasta .hp-fa .ic-btn{width:26px;height:26px;font-size:13px}
+.hb-pasta .hp-vazia{padding:16px;text-align:center;color:var(--soft);font-size:13px}
+@media(max-width:860px){.hb-pasta .hp-acts{width:100%;margin-left:0}}
+
 /* ===== bases (tabela/kanban/lista/galeria/calendário) ===== */
 .base-bar{display:flex;align-items:center;gap:4px;margin:4px 0 10px;flex-wrap:wrap}
 .views{display:flex;gap:2px;flex:1;min-width:0;overflow-x:auto}
@@ -981,9 +1007,9 @@ class Arquivo{static get toolbox(){return [{title:'Imagem',icon:'<svg width="17"
     if(!d.drive_id&&!d.url&&d.pendente){w.innerHTML='<div class="hb-arquivo"><div class="fa-row"><div class="fa-ico">'+MIME_ICO(d.mime)+'</div><div class="grow" style="min-width:0"><div class="fa-nome">'+esc(d.nome||'arquivo')+'</div><div class="fa-meta">'+(d.tamanho?fmtBytes(d.tamanho)+' · ':'')+'migrando do Notion para o Drive…</div></div></div></div>';return;}
     if(!d.drive_id&&!d.url){if(this.ro){w.innerHTML='<div class="hb-upload">Arquivo não enviado</div>';return;}
       const accept=d.modo==='imagem'?'image/*':d.modo==='video'?'video/*':'';
-      w.innerHTML='<div class="hb-upload"><div>'+(d.modo==='imagem'?'🖼 Clique ou arraste uma imagem':d.modo==='video'?'🎬 Clique ou arraste um vídeo':'📎 Clique ou arraste um arquivo')+'<div class="small soft" style="margin-top:4px">vai para o Google Drive da Lidera</div></div><input type="file" '+(accept?'accept="'+accept+'"':'')+'></div><div class="hb-url-form"><input class="input sm" placeholder="…ou cole um link (imagem, vídeo, Drive)"><button class="btn btn-sm btn-ghost">OK</button></div>';
-      const up=$('.hb-upload',w),inp=$('input[type=file]',w);up.onclick=()=>inp.click();inp.onchange=()=>this.enviar(inp.files[0]);
-      up.ondragover=e=>{e.preventDefault();up.classList.add('over');};up.ondragleave=()=>up.classList.remove('over');up.ondrop=e=>{e.preventDefault();up.classList.remove('over');if(e.dataTransfer.files[0])this.enviar(e.dataTransfer.files[0]);};
+      w.innerHTML='<div class="hb-upload"><div>'+(d.modo==='imagem'?'🖼 Clique ou arraste uma imagem':d.modo==='video'?'🎬 Clique ou arraste um vídeo':'📎 Clique ou arraste um arquivo')+'<div class="small soft" style="margin-top:4px">vai para o Google Drive da Lidera</div></div><input type="file" multiple '+(accept?'accept="'+accept+'"':'')+'></div><div class="hb-url-form"><input class="input sm" placeholder="…ou cole um link (imagem, vídeo, Drive)"><button class="btn btn-sm btn-ghost">OK</button></div>';
+      const up=$('.hb-upload',w),inp=$('input[type=file]',w);up.onclick=()=>inp.click();inp.onchange=()=>this.enviarVarios(Array.from(inp.files));
+      up.ondragover=e=>{e.preventDefault();up.classList.add('over');};up.ondragleave=()=>up.classList.remove('over');up.ondrop=async e=>{e.preventDefault();up.classList.remove('over');const its=await arquivosDoDrop(e.dataTransfer);if(its.length)this.enviarVarios(its.map(x=>x.file));};
       const ui=$('.hb-url-form input',w);$('.hb-url-form button',w).onclick=()=>{const u=ui.value.trim();if(!u)return;d.url=u;d.nome=d.nome||u.split('/').pop().split('?')[0];d.mime=d.mime||(/\.(png|jpe?g|gif|webp|svg)$/i.test(u)?'image/*':/\.(mp4|webm|mov)$/i.test(u)?'video/mp4':'');this.desenhar();this.api.blocks&&this.mudou();};ui.onkeydown=e=>{if(e.key==='Enter')$('.hb-url-form button',w).click();};return;}
     const ehImg=(d.mime||'').startsWith('image/')||d.modo==='imagem',ehVid=(d.mime||'').startsWith('video/')||d.modo==='video',ehAud=(d.mime||'').startsWith('audio/'),ehPdf=(d.mime||'').includes('pdf');
     const src=d.drive_id?arqUrl(d.drive_id,'view'):d.url;const thumb=d.drive_id?arqUrl(d.drive_id,'thumb','w1600'):d.url;
@@ -998,6 +1024,11 @@ class Arquivo{static get toolbox(){return [{title:'Imagem',icon:'<svg width="17"
     const cap=$('.fa-cap',w);if(cap)cap.addEventListener('input',()=>{d.legenda=cap.textContent;});}
   async enviar(file){if(!file)return;const w=this.w;$('.hb-upload',w).innerHTML='<span class="spin"></span> Enviando '+esc(file.name)+' ('+fmtBytes(file.size)+')…';
     const a=await uploadArquivo(file,S.pagina.id);if(!a){this.desenhar();return;}Object.assign(this.d,{drive_id:a.drive_id,nome:a.nome,mime:a.mime,tamanho:a.tamanho,link:a.link});this.desenhar();this.mudou();}
+  // vários arquivos de uma vez: o primeiro fica neste bloco, os outros viram blocos logo abaixo
+  async enviarVarios(files){files=(files||[]).filter(Boolean);if(!files.length)return;await this.enviar(files[0]);if(files.length===1)return;
+    let idx=this.api.blocks.getBlockIndex(this.block.id);const prog=progresso('Enviando arquivos',files.length);let n=1;
+    for(const f of files.slice(1)){prog.passo(++n,f.name);const a=await uploadArquivo(f,S.pagina.id,null,{quieto:true});if(a){idx++;this.api.blocks.insert('arquivo',{modo:a.mime.startsWith('image/')?'imagem':a.mime.startsWith('video/')?'video':'arquivo',...a},{},idx,false);}}
+    prog.fim();this.mudou();}
   mudou(){S.dirty=true;agendarSalvar();}
   renderSettings(){if(!podeEditar()||!this.d.drive_id)return [];return [{icon:'🗑',label:'Apagar do Drive também',onActivate:async()=>{if(await confirmar('Apagar arquivo','Remove o bloco e manda o arquivo para a lixeira do Google Drive.',{danger:true,ok:'Apagar'})){try{await fn('/apagar',{drive_id:this.d.drive_id});}catch(e){}this.api.blocks.delete(this.api.blocks.getCurrentBlockIndex());S.dirty=true;agendarSalvar();}},closeOnActivate:true}];}
   save(){return {...this.d};}}
@@ -1042,19 +1073,65 @@ class Sumario{static get toolbox(){return {title:'Sumário',icon:'<svg width="17
   render(){const w=document.createElement('div');w.className='hb-toc';const atualizar=()=>{const hs=$$('.ce-header',this.api.ui?document:document);w.innerHTML=hs.length?hs.map((h,i)=>'<a class="n'+h.tagName[1]+'" data-i="'+i+'">'+esc(h.textContent)+'</a>').join(''):'<span class="soft small">Os títulos da página aparecem aqui.</span>';$$('a',w).forEach(a=>a.onclick=()=>{const h=$$('.ce-header')[+a.dataset.i];h&&h.scrollIntoView({behavior:'smooth',block:'start'});});};setTimeout(atualizar,300);w.onmouseenter=atualizar;return w;}
   save(){return {};}}
 
+/* ---- bloco: pasta de arquivos (subpasta no Drive, vários arquivos de uma vez) ---- */
+const PASTA_FILA={};
+class Pasta{static get toolbox(){return {title:'Pasta de arquivos',icon:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>'};}
+  static get isReadOnlySupported(){return true;}static get sanitize(){return {nome:{}};}
+  constructor({data,readOnly,api,block}){this.d=Object.assign({nome:'',drive_pasta:null,link:'',arquivos:[],aberta:true},data||{});this.ro=readOnly;this.api=api;this.block=block;this.fila=data&&data._fila?PASTA_FILA[data._fila]:null;delete this.d._fila;}
+  render(){const w=document.createElement('div');this.w=w;this.desenhar();if(this.fila){const f=this.fila;this.fila=null;setTimeout(()=>this.enviar(f.itens,f.topo),50);}else if(!this.d.nome&&!this.ro&&!this.d.arquivos.length)setTimeout(()=>{const n=$('.hp-nome',w);n&&n.focus();},60);return w;}
+  desenhar(){const d=this.d,w=this.w,ro=this.ro;const n=d.arquivos.length;const tot=d.arquivos.reduce((s,a)=>s+(+a.tamanho||0),0);
+    w.innerHTML='<div class="hb-pasta'+(d.aberta?' aberta':'')+'"><div class="hp-head"><span class="hp-chev">▶</span><span class="hp-ico">📁</span><span class="hp-nome" contenteditable="'+(!ro)+'" spellcheck="false" data-ph="Nome da pasta">'+esc(d.nome||'')+'</span><span class="hp-meta">'+(n?n+' '+(n===1?'arquivo':'arquivos')+(tot?' · '+fmtBytes(tot):''):'vazia')+'</span><span class="hp-acts">'+(d.link?'<a class="btn btn-sm btn-ghost" href="'+esc(d.link)+'" target="_blank">Drive ↗</a>':'')+(ro?'':'<button class="btn btn-sm btn-ghost" data-a="add">+ Arquivos</button><button class="btn btn-sm btn-ghost" data-a="dir" title="Enviar uma pasta inteira do computador">⇧ Pasta</button>')+'</span></div>'+
+      '<div class="hp-body">'+(n?'<div class="hp-list">'+d.arquivos.map((a,i)=>'<div class="hp-item"><span class="hp-fi">'+MIME_ICO(a.mime)+'</span><span class="hp-fn" title="'+esc(a.nome)+'">'+(a.rel?'<span class="soft">'+esc(a.rel)+'/</span>':'')+esc(a.nome)+'</span><span class="hp-fs">'+(a.tamanho?fmtBytes(a.tamanho):'')+'</span><span class="hp-fa"><a class="ic-btn" title="Abrir" href="'+esc(a.drive_id?arqUrl(a.drive_id,'view'):a.url||'#')+'" target="_blank">↗</a><a class="ic-btn" title="Baixar" href="'+esc(a.drive_id?arqUrl(a.drive_id,'download'):a.url||'#')+'" target="_blank" download>⇩</a>'+(ro?'':'<button class="ic-btn" title="Remover" data-rm="'+i+'">✕</button>')+'</span></div>').join('')+'</div>':'<div class="hp-vazia">'+(ro?'Pasta vazia':'Solte arquivos ou uma pasta aqui, ou use os botões acima')+'</div>')+'</div></div>';
+    const head=$('.hp-head',w);head.onclick=e=>{if(e.target.closest('.hp-nome,.hp-acts'))return;d.aberta=!d.aberta;$('.hb-pasta',w).classList.toggle('aberta',d.aberta);};
+    const nm=$('.hp-nome',w);nm.addEventListener('input',()=>{d.nome=nm.textContent.trim();this.mudou();});nm.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();nm.blur();}};nm.onpaste=e=>{e.preventDefault();document.execCommand('insertText',false,(e.clipboardData.getData('text/plain')||'').replace(/\n+/g,' '));};
+    if(ro)return;
+    $('[data-a=add]',w).onclick=e=>{e.stopPropagation();escolherArquivos(fs=>this.enviar(fs.map(f=>({file:f,rel:''}))),'',true);};
+    $('[data-a=dir]',w).onclick=e=>{e.stopPropagation();escolherPasta(its=>this.enviar(its,its[0]&&its[0].topo));};
+    $$('[data-rm]',w).forEach(b=>b.onclick=async e=>{e.stopPropagation();const a=d.arquivos[+b.dataset.rm];if(!await confirmar('Remover arquivo','"'+a.nome+'" sai da pasta e vai para a lixeira do Drive.',{danger:true,ok:'Remover'}))return;try{if(a.drive_id)await fn('/apagar',{drive_id:a.drive_id});}catch(x){}d.arquivos.splice(+b.dataset.rm,1);this.desenhar();this.mudou();});
+    const z=$('.hb-pasta',w);z.ondragover=e=>{e.preventDefault();e.stopPropagation();z.classList.add('over');};z.ondragleave=()=>z.classList.remove('over');
+    z.ondrop=async e=>{e.preventDefault();e.stopPropagation();z.classList.remove('over');const its=await arquivosDoDrop(e.dataTransfer);if(!its.length)return;const topo=(!d.nome&&!d.arquivos.length&&its.every(x=>x.topo===its[0].topo)&&its[0].topo)||null;this.enviar(its.map(x=>({file:x.file,rel:x.topo&&!topo?x.topo+(x.rel?'/'+x.rel:''):x.rel})),topo);};}
+  // itens: [{file, rel}] (rel = subpasta dentro desta pasta); topo: nome sugerido quando a pasta ainda não tem nome
+  async enviar(itens,topo){itens=(itens||[]).filter(x=>x&&x.file);if(!itens.length)return;const d=this.d;
+    if(!d.nome)d.nome=topo||'Pasta';
+    const prog=progresso('Enviando para "'+d.nome+'"',itens.length);const pastas={};
+    try{
+      if(!d.drive_pasta){const j=await fn('/pasta/criar',{pagina_id:S.pagina.id,caminho:d.nome});d.drive_pasta=j.pasta;d.link=j.link;}
+      pastas['']=d.drive_pasta;let n=0;
+      for(const it of itens){n++;prog.passo(n,it.file.name);const rel=(it.rel||'').replace(/^\/+|\/+$/g,'');
+        if(rel&&!pastas[rel]){const j=await fn('/pasta/criar',{pagina_id:S.pagina.id,caminho:d.nome+'/'+rel});pastas[rel]=j.pasta;}
+        const a=await uploadArquivo(it.file,S.pagina.id,pastas[rel],{quieto:true});
+        if(a){d.arquivos.push({drive_id:a.drive_id,nome:a.nome,mime:a.mime,tamanho:a.tamanho,link:a.link,rel});this.desenhar();}}
+      prog.fim(n+' '+(n===1?'arquivo enviado':'arquivos enviados')+' para "'+d.nome+'"');
+    }catch(e){prog.fim(false);toast('Falha: '+e.message,{erro:true,ms:7000});this.desenhar();}
+    this.mudou();}
+  mudou(){S.dirty=true;agendarSalvar();}
+  renderSettings(){return [{icon:'📁',label:'Abrir pasta no Drive',onActivate:()=>{if(this.d.link)window.open(this.d.link,'_blank');},closeOnActivate:true}];}
+  save(){const d={...this.d};delete d._fila;return d;}}
+
 /* ---- upload ---- */
 function escolherArquivos(cb,accept,multi){const i=document.createElement('input');i.type='file';if(accept)i.accept=accept;if(multi)i.multiple=true;i.onchange=()=>cb(Array.from(i.files));i.click();}
-async function uploadArquivo(file,paginaId){if(!file)return null;
+function escolherPasta(cb){const i=document.createElement('input');i.type='file';i.webkitdirectory=true;i.multiple=true;i.onchange=()=>{const fs=Array.from(i.files);cb(fs.map(f=>{const parts=(f.webkitRelativePath||f.name).split('/');return {file:f,topo:parts[0],rel:parts.slice(1,-1).join('/')};}));};i.click();}
+// arrastar: lê arquivos e pastas (webkitGetAsEntry) → [{file,rel,topo}] (rel = subpasta dentro do que foi solto)
+async function arquivosDoDrop(dt){const out=[];const items=Array.from(dt.items||[]);const entries=items.map(it=>it.webkitGetAsEntry&&it.webkitGetAsEntry()).filter(Boolean);
+  if(!entries.length)return Array.from(dt.files||[]).map(f=>({file:f,rel:'',topo:''}));
+  const ler=(en,rel,topo)=>new Promise(res=>{if(en.isFile){en.file(f=>{out.push({file:f,rel,topo});res();},()=>res());}
+    else if(en.isDirectory){const r=en.createReader();const lerTudo=acc=>r.readEntries(async es=>{if(!es.length){for(const e of acc)await ler(e,rel?rel+'/'+en.name:(topo?en.name:''),topo||en.name);res();}else lerTudo(acc.concat(es));},()=>res());lerTudo([]);}else res();});
+  for(const en of entries){if(en.isDirectory)await ler(en,'',null);else await ler(en,'','');}
+  // para pastas: topo = nome da pasta solta; rel = caminho relativo dentro dela
+  return out.map(x=>{if(x.topo&&x.rel===x.topo)x.rel='';if(x.topo&&x.rel.startsWith(x.topo+'/'))x.rel=x.rel.slice(x.topo.length+1);return x;});}
+function progresso(titulo,total){const t=document.createElement('div');t.className='toast';t.innerHTML='<span class="spin" style="border-top-color:var(--gold-soft)"></span><span class="pt"></span>';$('#toasts').appendChild(t);const pt=$('.pt',t);pt.textContent=titulo+' 1/'+total;
+  return {passo:(n,nome)=>{pt.textContent=titulo+' '+n+'/'+total+(nome?' · '+nome:'');},fim:(msg)=>{t.remove();if(msg!==false)toast(msg||(total+' arquivos enviados para o Drive'));}};}
+async function uploadArquivo(file,paginaId,pastaId,opts){opts=opts||{};if(!file)return null;const quieto=!!opts.quieto;
   try{
-    if(file.size<=4*1024*1024){const fd=new FormData();fd.append('file',file);fd.append('pagina_id',paginaId);fd.append('nome',file.name);const j=await fn('/upload',fd);toast('Arquivo enviado para o Drive');return j.arquivo;}
+    if(file.size<=4*1024*1024){const fd=new FormData();fd.append('file',file);fd.append('pagina_id',paginaId);fd.append('nome',file.name);if(pastaId)fd.append('pasta_id',pastaId);const j=await fn('/upload',fd);if(!quieto)toast('Arquivo enviado para o Drive');return j.arquivo;}
     // arquivos maiores: sessão retomável, os bytes vão direto para o Google
-    const ini=await fn('/upload/iniciar',{pagina_id:paginaId,nome:file.name,mime:file.type||'application/octet-stream',tamanho:file.size});
-    const t=toast('Enviando '+file.name+' ('+fmtBytes(file.size)+')…',{ms:600000});
+    const ini=await fn('/upload/iniciar',{pagina_id:paginaId,nome:file.name,mime:file.type||'application/octet-stream',tamanho:file.size,pasta_id:pastaId||null});
+    const pr=quieto?null:progresso('Enviando '+file.name+' ('+fmtBytes(file.size)+')',1);
     const r=await fetch(ini.sessao,{method:'PUT',headers:{'Content-Type':file.type||'application/octet-stream'},body:file});
     if(!r.ok)throw new Error('O Google recusou o envio ('+r.status+').');
     const g=await r.json();const j=await fn('/upload/concluir',{pagina_id:paginaId,drive_id:g.id,pasta:ini.pasta});
-    $$('#toasts .toast').forEach(x=>x.remove());toast('Arquivo enviado para o Drive');return j.arquivo;
-  }catch(e){$$('#toasts .toast').forEach(x=>x.remove());toast('Falha no envio: '+e.message,{erro:true,ms:7000});return null;}}
+    if(pr)pr.fim('Arquivo enviado para o Drive');return j.arquivo;
+  }catch(e){toast('Falha no envio de '+file.name+': '+e.message,{erro:true,ms:7000});return null;}}
 
 /* ---- montar / destruir ---- */
 function montarEditor(p,host){if(!host)return;destruirEditor();const ro=!podeEditar();
@@ -1070,6 +1147,7 @@ function montarEditor(p,host){if(!host)return;destruirEditor();const ro=!podeEdi
       code:{class:CodeTool,config:{placeholder:'Código'}},
       delimiter:Delimiter,
       arquivo:{class:Arquivo},
+      pasta:{class:Pasta},
       link:{class:LinkCard},
       embed:{class:Embed,config:{services:{youtube:true,vimeo:true,instagram:true,twitter:true,figma:true,miro:true}}},
       pagina:{class:PaginaLink},
@@ -1082,8 +1160,13 @@ function montarEditor(p,host){if(!host)return;destruirEditor();const ro=!podeEdi
   });
   S.editor=ed;S.editorPaginaId=p.id;
   // colar arquivos/imagens direto no editor
-  host.addEventListener('paste',async e=>{if(ro)return;const fs=Array.from(e.clipboardData.files||[]);if(!fs.length)return;e.preventDefault();for(const f of fs){const a=await uploadArquivo(f,p.id);if(a){ed.blocks.insert('arquivo',{modo:a.mime.startsWith('image/')?'imagem':'arquivo',...a});}}S.dirty=true;agendarSalvar();});
-  host.addEventListener('drop',async e=>{if(ro)return;const fs=Array.from(e.dataTransfer.files||[]);if(!fs.length)return;e.preventDefault();e.stopPropagation();for(const f of fs){const a=await uploadArquivo(f,p.id);if(a)ed.blocks.insert('arquivo',{modo:a.mime.startsWith('image/')?'imagem':'arquivo',...a});}S.dirty=true;agendarSalvar();},true);
+  const inserirArquivos=async fs=>{if(!fs.length)return;const prog=fs.length>1?progresso('Enviando arquivos',fs.length):null;let n=0;for(const f of fs){n++;prog&&prog.passo(n,f.name);const a=await uploadArquivo(f,p.id,null,{quieto:!!prog});if(a)ed.blocks.insert('arquivo',{modo:a.mime.startsWith('image/')?'imagem':a.mime.startsWith('video/')?'video':'arquivo',...a});}prog&&prog.fim();S.dirty=true;agendarSalvar();};
+  host.addEventListener('paste',async e=>{if(ro)return;const fs=Array.from(e.clipboardData.files||[]);if(!fs.length)return;e.preventDefault();inserirArquivos(fs);});
+  host.addEventListener('drop',async e=>{if(ro)return;if(e.target.closest&&e.target.closest('.hb-pasta,.hb-upload'))return;const dt=e.dataTransfer;if(!dt||(!dt.files.length&&!dt.items.length))return;e.preventDefault();e.stopPropagation();
+    const its=await arquivosDoDrop(dt);if(!its.length)return;
+    const soltos=its.filter(x=>!x.topo).map(x=>x.file);const porPasta={};its.filter(x=>x.topo).forEach(x=>{(porPasta[x.topo]=porPasta[x.topo]||[]).push({file:x.file,rel:x.rel});});
+    for(const topo in porPasta){const id=sid();PASTA_FILA[id]={itens:porPasta[topo],topo};ed.blocks.insert('pasta',{nome:topo,_fila:id});}
+    await inserirArquivos(soltos);},true);
   // backup local não enviado?
   try{const b=JSON.parse(localStorage.getItem('hub_bkp_'+p.id)||'null');if(b&&b.em>new Date(p.atualizado_em).getTime()){toast('Há alterações não enviadas desta página.',{acao:'Restaurar',onAcao:async()=>{await ed.isReady;ed.render(b.conteudo);S.pagina.titulo=b.titulo;$('.page-title').textContent=b.titulo;S.dirty=true;agendarSalvar();},ms:10000});}}catch(e){}}
 function destruirEditor(){if(S.editor){try{S.editor.destroy();}catch(e){}S.editor=null;S.editorPaginaId=null;}}
@@ -1091,12 +1174,12 @@ function destruirEditor(){if(S.editor){try{S.editor.destroy();}catch(e){}S.edito
 /* ---- texto plano (busca) e markdown ---- */
 function semTags(h){const d=document.createElement('div');d.innerHTML=String(h||'');return d.textContent||'';}
 function textoPlano(conteudo,props,esquema){const out=[];const bl=(conteudo&&conteudo.blocks)||[];const itens=l=>(l||[]).forEach(i=>{out.push(semTags(i.content));itens(i.items);});
-  bl.forEach(b=>{const d=b.data||{};switch(b.type){case 'paragraph':case 'header':out.push(semTags(d.text));break;case 'list':itens(d.items);break;case 'callout':out.push(semTags(d.text));break;case 'quote':out.push(semTags(d.text),semTags(d.caption));break;case 'toggle':out.push(semTags(d.text));break;case 'table':(d.content||[]).forEach(r=>out.push(r.map(semTags).join(' ')));break;case 'code':out.push(d.code);break;case 'arquivo':out.push(d.nome,d.legenda);break;case 'link':out.push(d.titulo,d.url);break;default:if(d.text)out.push(semTags(d.text));}});
+  bl.forEach(b=>{const d=b.data||{};switch(b.type){case 'paragraph':case 'header':out.push(semTags(d.text));break;case 'list':itens(d.items);break;case 'callout':out.push(semTags(d.text));break;case 'quote':out.push(semTags(d.text),semTags(d.caption));break;case 'toggle':out.push(semTags(d.text));break;case 'table':(d.content||[]).forEach(r=>out.push(r.map(semTags).join(' ')));break;case 'code':out.push(d.code);break;case 'arquivo':out.push(d.nome,d.legenda);break;case 'pasta':out.push(d.nome,...(d.arquivos||[]).map(a=>a.nome));break;case 'link':out.push(d.titulo,d.url);break;default:if(d.text)out.push(semTags(d.text));}});
   if(props&&esquema&&esquema.props)esquema.props.forEach(pr=>{const v=props[pr.id];if(v==null||v==='')return;if(Array.isArray(v))out.push(v.map(x=>typeof x==='object'?(x.nome||''):x).join(' '));else if(typeof v==='object')out.push(v.inicio||'');else out.push(String(v));});
   return out.filter(Boolean).join('\n').slice(0,200000);}
 function blocosParaMD(conteudo){const bl=(conteudo&&conteudo.blocks)||[];const inl=h=>semTags(String(h||'').replace(/<b>|<strong>/g,'**').replace(/<\/b>|<\/strong>/g,'**').replace(/<i>|<em>/g,'_').replace(/<\/i>|<\/em>/g,'_').replace(/<br\s*\/?>/g,'\n'));
   const lista=(it,niv,st,n)=>(it||[]).map((i,k)=>'  '.repeat(niv)+(st==='ordered'?(k+1)+'. ':st==='checklist'?'- ['+(i.meta&&i.meta.checked?'x':' ')+'] ':'- ')+inl(i.content)+'\n'+lista(i.items,niv+1,st)).join('');
-  return bl.map(b=>{const d=b.data||{};switch(b.type){case 'header':return '#'.repeat(d.level||2)+' '+inl(d.text)+'\n';case 'list':return lista(d.items,0,d.style);case 'callout':return '> '+(d.icon||'')+' '+inl(d.text)+'\n';case 'quote':return '> '+inl(d.text)+'\n';case 'toggle':return '▸ **'+inl(d.text)+'**\n';case 'delimiter':return '---\n';case 'code':return '```\n'+(d.code||'')+'\n```\n';case 'table':return (d.content||[]).map((r,i)=>'| '+r.map(inl).join(' | ')+' |'+(i===0?'\n| '+r.map(()=>'---').join(' | ')+' |':'')).join('\n')+'\n';case 'arquivo':return '['+(d.nome||'arquivo')+']('+(d.link||d.url||'')+')\n';case 'link':return '['+(d.titulo||d.url)+']('+d.url+')\n';case 'pagina':return '→ '+(S.byId[d.id]?tituloDe(S.byId[d.id]):'página')+'\n';case 'base':return '(base de dados)\n';default:return inl(d.text||'')+'\n';}}).join('\n');}
+  return bl.map(b=>{const d=b.data||{};switch(b.type){case 'header':return '#'.repeat(d.level||2)+' '+inl(d.text)+'\n';case 'list':return lista(d.items,0,d.style);case 'callout':return '> '+(d.icon||'')+' '+inl(d.text)+'\n';case 'quote':return '> '+inl(d.text)+'\n';case 'toggle':return '▸ **'+inl(d.text)+'**\n';case 'delimiter':return '---\n';case 'code':return '```\n'+(d.code||'')+'\n```\n';case 'table':return (d.content||[]).map((r,i)=>'| '+r.map(inl).join(' | ')+' |'+(i===0?'\n| '+r.map(()=>'---').join(' | ')+' |':'')).join('\n')+'\n';case 'arquivo':return '['+(d.nome||'arquivo')+']('+(d.link||d.url||'')+')\n';case 'pasta':return '📁 '+(d.nome||'Pasta')+'\n'+(d.arquivos||[]).map(a=>'- ['+a.nome+']('+(a.link||'')+')').join('\n')+'\n';case 'link':return '['+(d.titulo||d.url)+']('+d.url+')\n';case 'pagina':return '→ '+(S.byId[d.id]?tituloDe(S.byId[d.id]):'página')+'\n';case 'base':return '(base de dados)\n';default:return inl(d.text||'')+'\n';}}).join('\n');}
 
 
 /* ===================== bases de dados: esquema, linhas, visões ===================== */

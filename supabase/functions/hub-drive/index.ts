@@ -143,6 +143,18 @@ async function pastaDaPagina(paginaId: string): Promise<string> {
   await admin.from("hub_paginas").update({ drive_pasta: f.id }).eq("id", paginaId);
   return f.id;
 }
+async function subpasta(pai: string, nome: string): Promise<string> {
+  const q = encodeURIComponent(`name = '${nome.replace(/'/g, "\\'")}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false and '${pai}' in parents`);
+  const lista = await gapi(`files?q=${q}&fields=files(id,name)`);
+  if (lista.files?.[0]?.id) return lista.files[0].id;
+  const f = await gapi("files?fields=id", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: nome, mimeType: "application/vnd.google-apps.folder", parents: [pai] }) });
+  return f.id;
+}
+async function pastaCaminho(paginaId: string, caminho: string): Promise<string> {
+  let atual = await pastaDaPagina(paginaId);
+  for (const parte of String(caminho || "").split("/").map((x) => nomeSeguro(x.trim())).filter(Boolean)) atual = await subpasta(atual, parte);
+  return atual;
+}
 async function enviar(pasta: string, nome: string, mime: string, bytes: Uint8Array) {
   const meta = JSON.stringify({ name: nome, parents: [pasta] });
   const limite = "hub" + crypto.randomUUID().replace(/-/g, "");
@@ -232,22 +244,22 @@ Deno.serve(async (req) => {
 
     if (rota === "/upload") {
       if (!edita(q)) return erro("Sem permissão para enviar arquivos.", 403);
-      let paginaId = "", nome = "", mime = "", bytes: Uint8Array | null = null;
+      let paginaId = "", nome = "", mime = "", bytes: Uint8Array | null = null, pastaId = "";
       const ct = req.headers.get("content-type") || "";
       if (ct.includes("multipart/form-data")) {
         const fd = await req.formData();
         const f = fd.get("file");
         if (!(f instanceof File)) return erro("Arquivo ausente.");
-        paginaId = String(fd.get("pagina_id") || ""); nome = String(fd.get("nome") || f.name || "arquivo"); mime = f.type || "application/octet-stream";
+        paginaId = String(fd.get("pagina_id") || ""); nome = String(fd.get("nome") || f.name || "arquivo"); mime = f.type || "application/octet-stream"; pastaId = String(fd.get("pasta_id") || "");
         bytes = new Uint8Array(await f.arrayBuffer());
       } else {
         const b = await req.json();
-        paginaId = b.pagina_id || ""; nome = b.nome || "arquivo"; mime = b.mime || "application/octet-stream";
+        paginaId = b.pagina_id || ""; nome = b.nome || "arquivo"; mime = b.mime || "application/octet-stream"; pastaId = b.pasta_id || "";
         if (!b.dataB64) return erro("dataB64 ausente.");
         const bin = atob(b.dataB64); bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
       }
       if (!paginaId) return erro("pagina_id ausente.");
-      const pasta = await pastaDaPagina(paginaId);
+      const pasta = /^[\w-]+$/.test(pastaId) ? pastaId : await pastaDaPagina(paginaId);
       const f = await enviar(pasta, nome, mime, bytes!);
       const { data: row } = await admin.from("hub_arquivos").insert({ pagina_id: paginaId, drive_id: f.id, nome: f.name || nome, mime: f.mimeType || mime, tamanho: +(f.size || bytes!.length), link: f.webViewLink || null, pasta_id: pasta, criado_por: q.uid }).select().single();
       return json({ ok: true, arquivo: { id: row?.id, drive_id: f.id, nome: f.name || nome, mime: f.mimeType || mime, tamanho: +(f.size || bytes!.length), link: f.webViewLink, tem_thumb: !!f.thumbnailLink } });
@@ -255,9 +267,9 @@ Deno.serve(async (req) => {
     // ----- upload grande: sessão retomável (o cliente manda os bytes direto ao Google) -----
     if (rota === "/upload/iniciar") {
       if (!edita(q)) return erro("Sem permissão para enviar arquivos.", 403);
-      const { pagina_id, nome, mime, tamanho } = await req.json();
+      const { pagina_id, nome, mime, tamanho, pasta_id } = await req.json();
       if (!pagina_id || !nome) return erro("pagina_id e nome são obrigatórios.");
-      const pasta = await pastaDaPagina(pagina_id);
+      const pasta = /^[\w-]+$/.test(pasta_id || "") ? pasta_id : await pastaDaPagina(pagina_id);
       const origem = req.headers.get("Origin") || "";
       const r = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id,name,mimeType,size,webViewLink,thumbnailLink", {
         method: "POST",
@@ -282,6 +294,13 @@ Deno.serve(async (req) => {
       await gapi(`files/${drive_id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trashed: true }) });
       await admin.from("hub_arquivos").delete().eq("drive_id", drive_id);
       return json({ ok: true });
+    }
+    if (rota === "/pasta/criar") {
+      if (!edita(q)) return erro("Sem permissão.", 403);
+      const { pagina_id, caminho } = await req.json();
+      if (!pagina_id) return erro("pagina_id ausente.");
+      const id = await pastaCaminho(pagina_id, caminho || "Pasta");
+      return json({ ok: true, pasta: id, link: `https://drive.google.com/drive/folders/${id}` });
     }
     if (rota === "/pasta") {
       if (!edita(q)) return erro("Sem permissão.", 403);
