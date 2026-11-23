@@ -3,15 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#1D3573">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#191919" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Hub">
 <title>Hub · by Lidera</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231D3573'/%3E%3Ctext x='32' y='43' font-family='Georgia,serif' font-size='34' font-weight='600' fill='%23C2A875' text-anchor='middle'%3EH%3C/text%3E%3C/svg%3E">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231D3573'/%3E%3Ctext x='32' y='45' font-family='system-ui,sans-serif' font-size='38' font-weight='700' fill='%23fff' text-anchor='middle'%3EL%3C/text%3E%3C/svg%3E">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@2.31.7/dist/editorjs.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@editorjs/header@2.8.9/dist/header.umd.js"></script>
@@ -27,6 +25,7 @@
 <script src="https://cdn.jsdelivr.net/npm/editorjs-undo@2.0.28/dist/bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/editorjs-drag-drop@1.1.16/dist/bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/editorjs-toggle-block@0.3.16/dist/bundle.js"></script>
+<script>try{var t=localStorage.getItem('hub_tema')||'auto';if(t==='escuro'||(t==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.style.background='#191919';}catch(e){}</script>
 <style>
 /*__CSS__*/
 </style>
@@ -36,37 +35,33 @@
 
 <div class="app" id="app">
   <aside class="sidebar" id="sidebar">
-    <div class="brand">
-      <div class="brand-row">
-        <div><div class="wm">Hub</div><div class="sub">BY LIDERA</div></div>
-        <button class="ic-btn sb-close mob-only" onclick="sbToggle(false)" title="Fechar menu">✕</button>
-      </div>
+    <div class="sb-head">
+      <button class="ws" onclick="wsMenu(this)" title="Conta e preferências"><span class="ws-ico">L</span><span class="ws-nome">Lidera</span><span data-ic="chevd"></span></button>
+      <button class="ic-btn" onclick="ehMobile()?sbToggle(false):sbCollapse(true)" title="Fechar barra lateral" data-ic="collapse"></button>
+      <button class="ic-btn fixo" onclick="novaPagina(null)" title="Nova página" data-ic="edit"></button>
     </div>
     <div class="sb-tools">
-      <button class="sb-search" onclick="buscaAbrir()"><span class="ico">⌕</span><span>Buscar</span><kbd>⌘K</kbd></button>
-      <a class="sb-item" data-rota="inicio" onclick="go('inicio')"><span class="ico">⌂</span><span>Início</span></a>
+      <a class="sb-item" onclick="buscaAbrir()"><span class="ico" data-ic="search"></span><span>Buscar</span></a>
+      <a class="sb-item" data-rota="inicio" onclick="go('inicio')"><span class="ico" data-ic="home"></span><span>Página inicial</span></a>
     </div>
     <nav class="nav" id="nav">
-      <div class="nav-sec" id="nav_fav"></div>
+      <div class="nav-sec" id="nav_fav" style="margin-top:6px"></div>
       <div class="nav-sec">
-        <div class="nav-lbl"><span>PÁGINAS</span><button class="ic-btn" onclick="novaPagina(null)" title="Nova página">+</button></div>
+        <div class="nav-lbl"><span>Páginas</span><button class="ic-btn" onclick="novaPagina(null)" title="Nova página" data-ic="plus"></button></div>
         <div id="nav_tree" class="tree"></div>
       </div>
       <div class="nav-sec nav-bottom">
-        <a class="sb-item" data-rota="lixeira" onclick="go('lixeira')"><span class="ico">🗑</span><span>Lixeira</span></a>
-        <a class="sb-item" data-rota="config" onclick="go('config')"><span class="ico">⚙</span><span>Configurações</span></a>
+        <a class="sb-item" data-rota="config" onclick="go('config')"><span class="ico" data-ic="gear"></span><span>Configurações</span></a>
+        <a class="sb-item" data-rota="lixeira" onclick="go('lixeira')"><span class="ico" data-ic="trash"></span><span>Lixeira</span></a>
       </div>
     </nav>
-    <div class="side-foot">
-      <div id="footName">—</div>
-      <div class="foot-row"><span id="footPapel"></span><button class="ic-btn" onclick="temaCiclar()" id="temaBtn" title="Tema">◐</button><a onclick="logout()" class="foot-link">Sair</a></div>
-    </div>
   </aside>
   <div class="sb-backdrop" id="sb_backdrop" onclick="sbToggle(false)"></div>
 
   <main class="main">
+    <div class="bar-load" id="bar_load"></div>
     <header class="topbar">
-      <button class="ic-btn menu-btn" onclick="sbToggle(true)" title="Menu">☰</button>
+      <button class="ic-btn menu-btn" onclick="ehMobile()?sbToggle(true):sbCollapse(false)" title="Abrir barra lateral" data-ic="menu"></button>
       <div class="crumbs" id="crumbs"></div>
       <div class="top-actions" id="top_actions"></div>
     </header>

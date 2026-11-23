@@ -5,21 +5,20 @@ function ancestrais(id){const out=[];let n=S.byId[id];let g=0;while(n&&n.parent_
 function tituloDe(n){return (n&&n.titulo)||'Sem título';}
 
 function renderTree(){const el=$('#nav_tree');if(!el)return;const raiz=filhosDe(null);
-  el.innerHTML=raiz.length?raiz.map(n=>nodeHTML(n,0)).join(''):'<div class="vazio">Nenhuma página ainda. Clique em + para criar.</div>';
+  el.innerHTML=raiz.length?raiz.map(n=>nodeHTML(n,0)).join(''):'<div class="vazio">Nenhuma página ainda.</div>';
   marcarAtivo();}
-function nodeHTML(n,nivel){const kids=filhosDe(n.id);const aberto=!!S.open[n.id];const tem=kids.length>0||n.tem_filhos;
-  return '<div class="tnode" data-id="'+n.id+'"><div class="tn" data-id="'+n.id+'" draggable="'+(podeEditar()?'true':'false')+'" onclick="abrirPagina(\''+n.id+'\')" oncontextmenu="event.preventDefault();menuPagina(event.currentTarget,\''+n.id+'\')">'+
-    '<span class="chev'+(aberto?' open':'')+(tem?'':' none')+'" onclick="event.stopPropagation();treeToggle(\''+n.id+'\')">▶</span>'+
-    '<span class="ti">'+iconeDe(n)+'</span><span class="tt">'+esc(tituloDe(n))+'</span>'+
-    (podeEditar()?'<span class="ta"><button class="ic-btn" title="Mais" onclick="event.stopPropagation();menuPagina(this,\''+n.id+'\')">···</button><button class="ic-btn" title="Nova subpágina" onclick="event.stopPropagation();novaPagina(\''+n.id+'\')">+</button></span>':'')+
-    '</div>'+(aberto&&kids.length?'<div class="tk">'+kids.map(k=>nodeHTML(k,nivel+1)).join('')+'</div>':'')+'</div>';}
+function nodeHTML(n,nivel){const kids=filhosDe(n.id);const aberto=!!S.open[n.id];const pad=4+nivel*14;const pe=podeEditar();
+  return '<div class="tnode" data-id="'+n.id+'"><div class="tn" data-id="'+n.id+'" style="padding-left:'+pad+'px" draggable="'+(pe?'true':'false')+'" onclick="abrirPagina(\''+n.id+'\')" oncontextmenu="event.preventDefault();menuPagina(event.currentTarget,\''+n.id+'\')">'+
+    '<span class="tslot"><span class="ti">'+iconeDe(n)+'</span><span class="chev'+(aberto?' open':'')+'" onclick="event.stopPropagation();treeToggle(\''+n.id+'\')">'+IC.chev+'</span></span>'+
+    '<span class="tt">'+esc(tituloDe(n))+'</span>'+
+    (pe?'<span class="ta"><button class="ic-btn" title="Excluir, duplicar e mais…" onclick="event.stopPropagation();menuPagina(this,\''+n.id+'\')">'+IC.dots+'</button><button class="ic-btn" title="Adicionar uma página dentro" onclick="event.stopPropagation();novaPagina(\''+n.id+'\')">'+IC.plus+'</button></span>':'')+
+    '</div>'+(aberto?(kids.length?'<div class="tk">'+kids.map(k=>nodeHTML(k,nivel+1)).join('')+'</div>':'<div class="tvazio" style="padding-left:'+(pad+34)+'px">'+(n.tipo==='base'?'Abra a base para ver os itens':'Nenhuma página dentro')+'</div>'):'')+'</div>';}
 function treeToggle(id){S.open[id]=!S.open[id];localStorage.setItem('hub_open',JSON.stringify(S.open));renderTree();}
-function treeRevelar(id){ancestrais(id).forEach(a=>S.open[a.id]=true);localStorage.setItem('hub_open',JSON.stringify(S.open));renderTree();}
-function marcarAtivo(){const id=S.rota&&S.rota.tipo==='p'?S.rota.id:null;$$('#nav_tree .tn').forEach(d=>d.classList.toggle('active',d.dataset.id===id));$$('.sb-item').forEach(a=>a.classList.toggle('active',!!S.rota&&a.dataset.rota===S.rota.tipo));
+function treeRevelar(id){let mudou=false;ancestrais(id).forEach(a=>{if(!S.open[a.id]){S.open[a.id]=true;mudou=true;}});if(mudou){localStorage.setItem('hub_open',JSON.stringify(S.open));renderTree();}else marcarAtivo();}
+function marcarAtivo(){const id=S.rota&&S.rota.tipo==='p'?S.rota.id:null;$$('#nav .tn').forEach(d=>d.classList.toggle('active',d.dataset.id===id));$$('.sb-item').forEach(a=>a.classList.toggle('active',!!S.rota&&a.dataset.rota===S.rota.tipo));
   const a=$('#nav_tree .tn.active');if(a&&!ehMobile())a.scrollIntoView({block:'nearest'});}
-
-function renderFavoritos(){const el=$('#nav_fav');if(!el)return;const favs=S.favoritos.map(f=>S.byId[f.pagina_id]).filter(Boolean);
-  el.innerHTML=favs.length?'<div class="nav-lbl"><span>FAVORITOS</span></div><div class="tree">'+favs.map(n=>'<div class="tn" data-id="'+n.id+'" onclick="abrirPagina(\''+n.id+'\')"><span class="chev none">▶</span><span class="ti">'+iconeDe(n)+'</span><span class="tt">'+esc(tituloDe(n))+'</span></div>').join('')+'</div>':'';}
+function renderFavoritos(){const el=$('#nav_fav');if(!el)return;const favs=S.favoritos.map(f=>S.byId[f.pagina_id]).filter(n=>n&&!n.arquivada);el.style.display=favs.length?'':'none';
+  el.innerHTML=favs.length?'<div class="nav-lbl"><span>Favoritos</span></div><div class="tree">'+favs.map(n=>'<div class="tn fav" data-id="'+n.id+'" style="padding-left:4px" onclick="abrirPagina(\''+n.id+'\')"><span class="tslot"><span class="ti">'+iconeDe(n)+'</span></span><span class="tt">'+esc(tituloDe(n))+'</span></div>').join('')+'</div>':'';marcarAtivo();}
 
 // ---- criar / renomear / mover / arquivar ----
 async function novaPagina(parentId,opts){opts=opts||{};if(!podeEditar())return toast('Você só tem permissão de leitura.',{erro:true});
@@ -27,10 +26,10 @@ async function novaPagina(parentId,opts){opts=opts||{};if(!podeEditar())return t
   const row={parent_id:parentId||null,base_id:opts.base_id||null,tipo:opts.tipo||'pagina',titulo:opts.titulo||'',icone:opts.icone||null,conteudo:opts.conteudo||{blocks:[]},props:opts.props||{},esquema:opts.esquema||null,visoes:opts.visoes||null,ordem};
   const {data,error}=await sb.from('hub_paginas').insert(row).select().single();if(error){toast('Não deu para criar: '+error.message,{erro:true});return null;}
   if(!data.base_id){S.tree.push({id:data.id,parent_id:data.parent_id,base_id:null,tipo:data.tipo,titulo:data.titulo,icone:data.icone,ordem:data.ordem,arquivada:false,atualizado_em:data.atualizado_em,tem_filhos:false});indexarArvore();if(parentId){S.open[parentId]=true;localStorage.setItem('hub_open',JSON.stringify(S.open));}renderTree();}
-  if(!opts.silencioso)abrirPagina(data.id);return data;}
+  S.cache[data.id]=data;if(!opts.silencioso)abrirPagina(data.id);return data;}
 async function atualizarPagina(id,patch){const {data,error}=await sb.from('hub_paginas').update(patch).eq('id',id).select('id,parent_id,base_id,tipo,titulo,icone,ordem,arquivada,atualizado_em').single();if(error){toast('Erro ao salvar: '+error.message,{erro:true});return null;}
   const n=S.byId[id];if(n){Object.assign(n,{titulo:data.titulo,icone:data.icone,parent_id:data.parent_id,ordem:data.ordem,arquivada:data.arquivada,atualizado_em:data.atualizado_em});renderTree();renderFavoritos();}
-  if(S.pagina&&S.pagina.id===id)Object.assign(S.pagina,patch);return data;}
+  if(S.pagina&&S.pagina.id===id)Object.assign(S.pagina,patch,{atualizado_em:data.atualizado_em});if(S.cache[id]&&S.cache[id]!==S.pagina)Object.assign(S.cache[id],patch,{atualizado_em:data.atualizado_em});return data;}
 function menuPagina(anchor,id){const n=S.byId[id]||(S.pagina&&S.pagina.id===id?S.pagina:null);if(!n)return;const itens=[
   {t:ehFav(id)?'Tirar dos favoritos':'Adicionar aos favoritos',ico:'★',f:()=>favToggle(id)},
   {t:'Copiar link',ico:'🔗',f:()=>copiar(linkPagina(id),'Link copiado')},'-'];
@@ -39,7 +38,7 @@ function menuPagina(anchor,id){const n=S.byId[id]||(S.pagina&&S.pagina.id===id?S
     {t:'Nova subpágina',ico:'+',f:()=>novaPagina(id)},
     {t:'Duplicar',ico:'⧉',f:()=>duplicarPagina(id)},
     {t:'Mover para…',ico:'→',f:()=>moverPaginaDialogo(id)},'-',
-    {t:'Arquivar (lixeira)',ico:'🗑',danger:true,f:()=>arquivarPagina(id)});
+    {t:'Mover para a lixeira',ico:'🗑',danger:true,f:()=>arquivarPagina(id)});
   menu(anchor,itens);}
 async function arquivarPagina(id){const n=S.byId[id];if(!n)return;await atualizarPagina(id,{arquivada:true});toast('"'+tituloDe(n)+'" foi para a lixeira',{acao:'Desfazer',onAcao:()=>atualizarPagina(id,{arquivada:false})});if(S.rota&&S.rota.tipo==='p'&&S.rota.id===id)go('inicio');}
 async function duplicarPagina(id){const {data:p}=await sb.from('hub_paginas').select('*').eq('id',id).single();if(!p)return;const copia=await novaPagina(p.parent_id,{titulo:(p.titulo||'Sem título')+' (cópia)',icone:p.icone,tipo:p.tipo,conteudo:p.conteudo,props:p.props,esquema:p.esquema,visoes:p.visoes,base_id:p.base_id,silencioso:true});
@@ -48,7 +47,7 @@ async function duplicarPagina(id){const {data:p}=await sb.from('hub_paginas').se
 function moverPaginaDialogo(id){const n=S.byId[id];const desc=new Set([id]);const marcar=pid=>filhosDe(pid).forEach(k=>{desc.add(k.id);marcar(k.id);});marcar(id);
   const opcoes=[{id:'',t:'(raiz)'}].concat(S.tree.filter(x=>!desc.has(x.id)&&!x.arquivada&&!x.base_id).map(x=>({id:x.id,t:ancestrais(x.id).map(tituloDe).concat([tituloDe(x)]).join(' / ')})).sort((a,b)=>a.t.localeCompare(b.t,'pt')));
   const bg=modal('<div class="modal-h">Mover "'+esc(tituloDe(n))+'" para</div><div class="modal-b"><input class="input" id="mv_f" placeholder="Filtrar…"><div id="mv_l" style="max-height:50vh;overflow:auto;margin-top:8px"></div></div>');
-  const render=q=>{$('#mv_l',bg).innerHTML=opcoes.filter(o=>!q||o.t.toLowerCase().includes(q)).slice(0,200).map(o=>'<div class="pi" data-id="'+o.id+'"><span class="ico">'+(o.id?iconeDe(S.byId[o.id]):'⌂')+'</span><span>'+esc(o.t)+'</span></div>').join('');$$('.pi',bg).forEach(d=>d.onclick=async()=>{fecharModal(bg);await atualizarPagina(id,{parent_id:d.dataset.id||null,ordem:Date.now()/1000});toast('Página movida');});};
+  const render=q=>{$('#mv_l',bg).innerHTML=opcoes.filter(o=>!q||o.t.toLowerCase().includes(q)).slice(0,200).map(o=>'<div class="pi" data-id="'+o.id+'"><span class="ico">'+(o.id?iconeDe(S.byId[o.id]):IC.home)+'</span><span>'+esc(o.t)+'</span></div>').join('');$$('.pi',bg).forEach(d=>d.onclick=async()=>{fecharModal(bg);await atualizarPagina(id,{parent_id:d.dataset.id||null,ordem:Date.now()/1000});toast('Página movida');});};
   render('');$('#mv_f',bg).oninput=e=>render(e.target.value.toLowerCase());}
 
 // ---- arrastar na árvore ----
@@ -69,6 +68,7 @@ document.addEventListener('drop',async e=>{if(!DRAG)return;const tn=e.target.clo
 // ---- realtime ----
 function assinarRealtime(){if(S.rt)return;S.rt=sb.channel('hub').on('postgres_changes',{event:'*',schema:'public',table:'hub_paginas'},p=>{
   const n=p.new||{},o=p.old||{};
+  if(n.id&&S.cache[n.id]&&n.atualizado_por!==S.me.id&&!(S.pagina&&S.pagina.id===n.id))delete S.cache[n.id];
   if(p.eventType==='DELETE'){if(S.byId[o.id]){S.tree=S.tree.filter(x=>x.id!==o.id);indexarArvore();renderTree();renderFavoritos();}if(S.pagina&&S.pagina.base_id===o.base_id&&o.base_id)baseRecarregar&&baseRecarregar(o.base_id);return;}
   if(n.base_id){ // linha de base
     if(typeof baseLinhaRealtime==='function')baseLinhaRealtime(n,p.eventType);
@@ -80,3 +80,6 @@ function assinarRealtime(){if(S.rt)return;S.rt=sb.channel('hub').on('postgres_ch
   // página aberta editada por outra pessoa
   if(S.pagina&&S.pagina.id===n.id&&n.atualizado_por&&n.atualizado_por!==S.me.id&&!S.saving){const antes=JSON.stringify(S.pagina.conteudo);if(JSON.stringify(n.conteudo)!==antes||n.titulo!==S.pagina.titulo){toast((nomeMembro(n.atualizado_por)||'Outra pessoa')+' editou esta página',{acao:'Recarregar',onAcao:()=>abrirPaginaView(n.id,true),ms:9000});}}
 }).subscribe();}
+
+// passar o mouse numa página da barra lateral já vai buscando o conteúdo (abre instantâneo ao clicar)
+let PF_T=null;document.addEventListener('mouseover',e=>{const tn=e.target.closest&&e.target.closest('#nav .tn');if(!tn)return;clearTimeout(PF_T);PF_T=setTimeout(()=>prefetch(tn.dataset.id),70);});
